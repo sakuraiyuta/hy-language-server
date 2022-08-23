@@ -1,4 +1,3 @@
-(require [hy.contrib.walk [let]])
 (import hy)
 
 (defclass Jedhy []
@@ -10,7 +9,7 @@
       (self.logger.info (+ "import/require: " __i__))
       (try
         (-> __i__
-            (hy.read-str)
+            (hy.read)
             (hy.eval))
         (except [e BaseException]
           (self.logger.info (+ "import/require failed: " (repr e))))))
