@@ -1,3 +1,4 @@
+(require hyrule * :readers *)
 (import hy)
 
 (defclass Jedhy []

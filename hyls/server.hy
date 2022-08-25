@@ -1,5 +1,6 @@
-(require hyrule *)
+(require hyrule * :readers *)
 (import logging)
+(import itertools [chain])
 (import re)
 (import jedhy.api [API])
 (import pygls.lsp.methods [COMPLETION
@@ -41,7 +42,7 @@
 (defclass Server []
   (defn __init__ [self]
     (setv self.server (LanguageServer))
-    (setv self.jedhy (Jedhy (API) :logger logger))
+    (setv self.jedhy (Jedhy (API :logger logger) :logger logger))
     (setv self.imports [])
 
     (defn
@@ -86,12 +87,20 @@
       None))
 
   (defn find-and-eval-imports [self ls uri]
-    (let [doc (ls.workspace.get_document uri)]
-      (for [m (re.finditer r"\(\s*(import|require)\s+([\w\.]+|\[[\w\.\s\*\?:\[\]]+\])\)" doc.source)]
+    (let [doc (ls.workspace.get_document uri)
+          iters (chain
+                  (re.finditer r"\(\s*(import|require)\s+([\w\.]+|[\w\.\s\*\?:\[\]]+)\)"
+                               doc.source)
+                  (re.finditer r"\(\s*(defn)\s+([\w\.]+|[\w\.\s\*\?:\[\]]+)\)"
+                               doc.source))]
+      (for [m iters]
         (logger.info (+ "try to evaluate: " (m.group)))
+        ;; FIXME: HyEvalError("module 'hy' has no attribute 'hyx_XampersandXreader'")
+        ;; when eval (require hyrule * :readers *).
+        ;; see also: https://github.com/hylang/hy/issues/2291
         (try
           (-> (m.group)
-              (hy.read-str)
+              (hy.read)
               (hy.eval))
           (except [e BaseException]
                   (logger.info (+ "cannot evaluate: " (repr e))))
